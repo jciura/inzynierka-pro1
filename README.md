@@ -4,7 +4,7 @@
 
 4. scg-cli generate <Sciezka> - najpierw generuje się zawsze dla projektu pojedyncze grafy semantyczne, bez tego reszata
    nie dziala
-5. scg-cli export -g CCN -o gdf <Sciezka> - export całego grafu do pliku .gdf
+5. scg-cli export -g SCG -o gdf <Sciezka> - export całego grafu do pliku .gdf
 6. scg-cli summary -g SCG <Sciezka> - szybkie podsumiwanie projektu
 7. scg-cli crucial <Sciezka> -n k; k - ile bierzemy węzłów o najwyższych wartościach, raczej chcemy podawać all, żeby
    każdy embedding miał te wartości, a nie tylko wybrane
