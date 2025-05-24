@@ -1,3 +1,9 @@
 sentence-transformers
 scikit-learn
 numpy
+httpx
+torch
+transformers
+faiss-cpu
+fastapi
+pydantic

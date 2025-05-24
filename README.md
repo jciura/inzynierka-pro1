@@ -1,11 +1,16 @@
 1. https://ollama.com
-2. https://drive.google.com/drive/folders/1x55SRmR5dxLMieFkUaBhBjHyDv0sI128?usp=sharing - folder z modelem
-3. Folder models skopiować do /.ollama
-4. w terminalu: ollama run codellama:7b-instruct - uruchomienie modelu
-5. Przykład zapytania w http://127.0.0.1:8000/docs:
-   1. "question": "Ile to 2+2?",
-   2. "context": ""
-6. Przykład zapytania o kod
-   1. file_path: examply.py
-   2. question: Co robi metoda add?
-   3. { "answer": "Metoda `add` jest funkcją, która dodaje dwa argumenty i zwraca ich sumę."}
+2. terminalu: ollama run codellama:7b-instruct - uruchomienie modelu
+3. scg-cli zmodyfikowany: https://github.com/jciura/scg-cli-modified
+
+4. scg-cli generate <Sciezka> - najpierw generuje się zawsze dla projektu pojedyncze grafy semantyczne, bez tego reszata
+   nie dziala
+5. scg-cli export -g CCN -o gdf <Sciezka> - export całego grafu do pliku .gdf
+6. scg-cli summary -g SCG <Sciezka> - szybkie podsumiwanie projektu
+7. scg-cli crucial <Sciezka> -n k; k - ile bierzemy węzłów o najwyższych wartościach, raczej chcemy podawać all, żeby
+   każdy embedding miał te wartości, a nie tylko wybrane
+8. scg-cli partition n; podaje jak podzielić projekt na n partycji
+9. Gephi - plik do otwierania plików .gdf - można użyć ale raczej bezużyteczny - nie na tym nie widać
+10. Przy zmianie scg-cli wywołać: sbt clean universal:packageBin, żeby wygenerować nową paczkę
+11. Na razie testowy projekt to projekt w springu do zapisywania się na webinary i zarządzania
+    nimi: https://github.com/jciura/test_project - wrzucić do projects i zmienić
+    nazwę na test 
