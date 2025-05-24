@@ -5,3 +5,5 @@ httpx
 torch
 transformers
 faiss-cpu
+fastapi
+pydantic
