@@ -4,7 +4,14 @@ from fastapi import FastAPI, HTTPException, status
 from pydantic import BaseModel
 import httpx
 from rag.retriver import similar_questions, similar_code
+import logging
 #from rag.generate_embeddings import generate_embeddings
+
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+
 
 app = FastAPI()
 
@@ -101,15 +108,36 @@ async def ask_rag(req: PrompRequest):
 @app.post("/ask_rag_code")
 async def ask_code_rag(req: PrompRequest):
     try:
+        logger.info(f"Received question: {req.question}")
+        logger.info(f"Using embedding file: {CODE_EMBEDDINGS}")
+
+        if req.context:
+            logger.warning("Context provided in request will be ignored  - RAG generates its own context")
+
+
         matches = similar_code(req.question, CODE_EMBEDDINGS, model_name=CODEBERT_MODEL_NAME)
-        context = "\n\n".join(m[1]["content"] for m in matches)
+        logger.info(f"Found {len(matches)} releveant code matches")
+        context_parts = []
+        sources = []
+        for score, chunk in matches:
+            file_name = chunk["metadata"]["file"]
+            logger.info(f"Using code from {file_name} with similarity score: {score}")
+            context_parts.append(f"# From file: {file_name}\n{chunk['content']}")
+            sources.append({
+                "file": file_name,
+                "similarity_score": round(float(score),3)
+            })
+        context = "\n\n".join(context_parts)
+        logger.info(f"Generated context length: {len(context)} character")
         prompt = f"Context:\n{context}\n\nQuestion: {req.question}\nAnswer:"
         answer = await response(prompt)
         return {
             "answer": answer,
-            "used_context": context
+            "used_context": context,
+            "sources": sources
         }
     except Exception as exc:
+        logger.error(f"Error in RAG: {str(exc)}", exc_info=True)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error in RAG: {str(exc)}")
 
 
