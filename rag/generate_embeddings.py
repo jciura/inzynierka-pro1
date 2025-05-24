@@ -1,20 +1,19 @@
-import json
 import torch
 from transformers import AutoTokenizer, AutoModel
-
+import json
+import chardet
 
 def mean_pooling(token_embeddings, attention_mask):
     input_mask_expanded = attention_mask.unsqueeze(-1).expand(token_embeddings.size()).float()
     return torch.sum(token_embeddings * input_mask_expanded, 1) / torch.clamp(input_mask_expanded.sum(1), min=1e-9)
 
 
-def generate_embeddings(texts, model_name="microsoft/codebert-base"):
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
-    model = AutoModel.from_pretrained(model_name)
+def generate_embeddings(texts, MODEL_NAME, batch_size=2):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = model.to(device)
+    tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
+    model = AutoModel.from_pretrained(MODEL_NAME).to(device)
     model.eval()
-    batch_size = 2
+
     embeddings = []
     n = len(texts)
     for i in range(0, n, batch_size):
@@ -30,13 +29,16 @@ def generate_embeddings(texts, model_name="microsoft/codebert-base"):
     return embeddings
 
 
-def code_embeddings(input_path, output_path, model_name="microsoft/codebert-base"):
-    with open(input_path, "r") as f:
-        chunks = json.load(f)
+def code_embeddings(chunks, output_path, MODEL_NAME):
+    if not chunks:
+        print("Warning: input chunks list is empty.")
+        return
+
     chunk_contents = []
     for chunk in chunks:
         chunk_contents.append(chunk["content"])
-    embeddings = generate_embeddings(chunk_contents, model_name)
+
+    embeddings = generate_embeddings(chunk_contents, MODEL_NAME)
     with open(output_path, "w") as out_f:
         for i, chunk in enumerate(chunks):
             chunk_data = {
@@ -52,21 +54,33 @@ def code_embeddings(input_path, output_path, model_name="microsoft/codebert-base
             out_f.write(json.dumps(chunk_data, ensure_ascii=False) + "\n")
 
 
-def questions_embeddings(qa_data, output_path, model_name="microsoft/codebert-base"):
-    questions = []
-    for qa in qa_data:
-        questions.append(qa["question"])
-    all_embeddings = generate_embeddings(questions, model_name)
+def questions_embeddings(qa_data, output_path, MODEL_NAME):
+    questions = [qa["question"] for qa in qa_data]
+    all_embeddings = generate_embeddings(questions, MODEL_NAME)
+
     for i, qa in enumerate(qa_data):
         qa["embedding"] = all_embeddings[i].tolist()
+
     with open(output_path, "w") as f:
         json.dump(qa_data, f, indent=2, ensure_ascii=False)
 
 
+def load_json(file_path, encoding="utf-8-sig"):
+    with open(file_path, "r", encoding=encoding) as f:
+        return json.load(f)
 
 if __name__ == "__main__":
-    input_path = "../data/project_chunks_fixed.json"
-    output_path = "../embeddings/embedding_project_fixed.jsonl"
+    MODEL_NAME = "microsoft/codebert-base"
 
+    # questions
+    qa_input_path = "../data/q&a_project.json"
+    qa_output_path = "../embeddings/qa_embedding_project_fixed.json"
+    qa_data = load_json(qa_input_path, 'ISO-8859-1')
+    questions_embeddings(qa_data, qa_output_path, MODEL_NAME)
 
-    code_embeddings(input_path, output_path)
+    # code
+    code_input_path = "../data/project_chunks_fixed.json"
+    code_output_path = "../embeddings/code_embedding_project_fixed.jsonl"
+    # Na razie robię embedding 50 chunków testowo
+    code_chunks = load_json(code_input_path)[:50]
+    code_embeddings(code_chunks, code_output_path, MODEL_NAME)

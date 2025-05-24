@@ -7,6 +7,7 @@ from rag.generate_embeddings import generate_embeddings
 def similar_questions(question, qa_data, model_name="microsoft/codebert-base"):
     question_embedding = generate_embeddings([question], model_name)[0]
     results = []
+    print(question_embedding)
     for qa in qa_data:
         qa_embedding = np.array(qa["embedding"])
         score = cosine_similarity([question_embedding], [qa_embedding])[0][0]

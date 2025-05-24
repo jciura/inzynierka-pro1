@@ -1,170 +1,114 @@
 [
   {
     "question": "Jakie parametry przyjmuje konstruktor Console() w pliku profile_pretty.py?",
-    "answer": "Console() w profile_pretty.py przyjmuje parametry: file=io.StringIO(), color_system=\"truecolor\", width=100. Pokazuje to że Console może pisać do StringIO zamiast stdout i obsługuje różne systemy kolorów."
+    "answer": "Console() w profile_pretty.py przyjmuje parametry: file=io.StringIO(), color_system=\"truecolor\", width=100. Pokazuje to, ?e Console mo?e pisa? do StringIO zamiast stdout i obs?uguje r�?ne systemy kolor�w."
   },
   {
-    "question": "Co się stanie jeśli usunę metodę begin_capture() z klasy Console?",
-    "answer": "Nie będzie można przechwytywać wyjścia Console do stringa. Kod w profile_pretty.py przestanie działać, ponieważ używa console.begin_capture() i console.end_capture() do mierzenia wydajności renderowania."
+    "question": "Co si? stanie je?li usun? metod? begin_capture() z klasy Console?",
+    "answer": "Nie b?dzie mo?na przechwytywa? wyj?cia Console do stringa. Kod w profile_pretty.py przestanie dzia?a?, poniewa? u?ywa console.begin_capture() i console.end_capture() do mierzenia wydajno?ci renderowania."
   },
   {
-    "question": "Jakie parametry ma metoda console.print() w przykładach kodu?",
-    "answer": "Z chunków widać że console.print() może przyjmować parametry: overflow=\"ignore\", crop=False, width=w (w Panel). Overflow kontroluje jak długi tekst jest obsługiwany, crop czy przycinać zawartość."
+    "question": "Jakie parametry ma metoda console.print() w przyk?adach kodu?",
+    "answer": "Z chunk�w wida?, ?e console.print() mo?e przyjmowa? parametry: overflow=\"ignore\", crop=False, width=w (w Panel). Overflow kontroluje jak d?ugi tekst jest obs?ugiwany, crop czy przycina? zawarto??."
   },
   {
     "question": "Co robi metoda Segment.divide() na podstawie profile_divide.py?",
-    "answer": "Segment.divide() dzieli listę segmentów na podstawie listy pozycji. W profile_divide.py dzieli segments na pozycjach [0, 1, 20, 24, 65, len(text)], co pozwala na precyzyjne cięcie tekstu w określonych miejscach."
+    "answer": "Segment.divide() dzieli list? segment�w na podstawie listy pozycji. W profile_divide.py dzieli segments na pozycjach [0, 1, 20, 24, 65, len(text)], co pozwala na precyzyjne ci?cie tekstu w okre?lonych miejscach."
   },
   {
-    "question": "Jakie są rzeczywiste parametry konstruktora Pretty() w kodzie?",
-    "answer": "Pretty() w stress_test_pretty.py przyjmuje parametry: obiekt do wyświetlania oraz indent_guides=True. To pokazuje że Pretty może wyświetlać linie wcięć dla lepszej czytelności zagnieżdżonych struktur."
+    "question": "Jakie s? rzeczywiste parametry konstruktora Pretty() w kodzie?",
+    "answer": "Pretty() w stress_test_pretty.py przyjmuje parametry: obiekt do wy?wietlania oraz indent_guides=True. To pokazuje, ?e Pretty mo?e wy?wietla? linie wci?? dla lepszej czytelno?ci zagnie?d?onych struktur."
   },
   {
-    "question": "Co się stanie jeśli usunę parametr indent_guides z Pretty()?",
-    "answer": "Linie wcięć przestaną być wyświetlane w pretty-printed strukturach danych. W stress_test_pretty.py zagnieżdżone struktury jak słownik DATA będą mniej czytelne bez wizualnych wskazówek wcięć."
+    "question": "Co si? stanie je?li usun? parametr indent_guides z Pretty()?",
+    "answer": "Linie wci?? przestan? by? wy?wietlane w pretty-printed strukturach danych. W stress_test_pretty.py zagnie?d?one struktury jak s?ownik DATA b?d? mniej czytelne bez wizualnych wskaz�wek wci??."
   },
   {
     "question": "Jakie faktyczne parametry ma Progress() w make_terminal_widths.py?",
-    "answer": "Progress() w make_terminal_widths.py jest tworzony bez parametrów jako progress = Progress(). Pokazuje to że Progress może działać z domyślnymi ustawieniami."
+    "answer": "Progress() w make_terminal_widths.py jest tworzony bez parametr�w jako progress = Progress(). Pokazuje to, ?e Progress mo?e dzia?a? z domy?lnymi ustawieniami."
   },
   {
     "question": "Co robi metoda progress.add_task() w rzeczywistym kodzie?",
-    "answer": "progress.add_task(\"Calculating table...\") tworzy nowe zadanie o nazwie \"Calculating table...\" i zwraca task_id. W make_terminal_widths.py służy do śledzenia postępu tworzenia tabeli szerokości znaków."
+    "answer": "progress.add_task(\"Calculating table...\") tworzy nowe zadanie o nazwie \"Calculating table...\" i zwraca task_id. W make_terminal_widths.py s?u?y do ?ledzenia post?pu tworzenia tabeli szeroko?ci znak�w."
   },
   {
     "question": "Jakie parametry ma progress.track() w faktycznym kodzie?",
-    "answer": "progress.track() przyjmuje: iterable (iter_widths), task_id=make_table_task, total=len(_widths)-1, description=\"Testing...\". Pozwala to na dokładne śledzenie postępu z niestandardowym opisem i całkowitą liczbą elementów."
+    "answer": "progress.track() przyjmuje: iterable (iter_widths), task_id=make_table_task, total=len(_widths)-1, description=\"Testing...\". Pozwala to na dok?adne ?ledzenie post?pu z niestandardowym opisem i ca?kowit? liczb? element�w."
   },
   {
-    "question": "Co się stanie jeśli usunę parametr total z progress.track()?",
-    "answer": "Progress nie będzie wiedział ile elementów ma do przetworzenia, więc nie pokaże dokładnego procentu ukończenia. W make_terminal_widths.py pasek postępu pokazywałby tylko że coś się dzieje, ale bez informacji o postępie."
+    "question": "Co si? stanie je?li usun? parametr total z progress.track()?",
+    "answer": "Progress nie b?dzie wiedzia? ile element�w ma do przetworzenia, wi?c nie poka?e dok?adnego procentu uko?czenia. W make_terminal_widths.py pasek post?pu pokazywa?by tylko, ?e co? si? dzieje, ale bez informacji o post?pie."
   },
   {
-    "question": "Jakie rzeczywiste importy używa rich.console?",
-    "answer": "Z chunków widać importy: from rich.console import Console. To potwierdza że Console jest główną klasą eksportowaną z modułu rich.console."
+    "question": "Jakie rzeczywiste importy u?ywa rich.console?",
+    "answer": "Z chunk�w wida? importy: from rich.console import Console. To potwierdza, ?e Console jest g?�wn? klas? eksportowan? z modu?u rich.console."
   },
   {
-    "question": "Co zawiera moduł rich.segment na podstawie importów?",
-    "answer": "Z profile_divide.py: from rich.segment import Segment. Segment to klasa do reprezentacji fragmentów tekstu z formatowaniem, ma metodę divide() do dzielenia segmentów."
+    "question": "Co zawiera modu? rich.segment na podstawie import�w?",
+    "answer": "Z profile_divide.py: from rich.segment import Segment. Segment to klasa do reprezentacji fragment�w tekstu z formatowaniem, ma metod? divide() do dzielenia segment�w."
   },
   {
     "question": "Jakie parametry ma timer() z rich._timer?",
-    "answer": "timer(\"Stress test\") przyjmuje opis jako parametr i działa jako context manager. W stress_test_pretty.py mierzy czas wykonania pętli renderującej Panel z Pretty."
+    "answer": "timer(\"Stress test\") przyjmuje opis jako parametr i dzia?a jako context manager. W stress_test_pretty.py mierzy czas wykonania p?tli renderuj?cej Panel z Pretty."
   },
   {
-    "question": "Co się stanie jeśli usunę parametr width z Panel()?",
-    "answer": "Panel będzie używać domyślnej szerokości. W stress_test_pretty.py pętla for w in range(130) testuje Panel z różnymi szerokościami - bez parametru width nie byłoby tego testu."
+    "question": "Co si? stanie je?li usun? parametr width z Panel()?",
+    "answer": "Panel b?dzie u?ywa? domy?lnej szeroko?ci. W stress_test_pretty.py p?tla for w in range(130) testuje Panel z r�?nymi szeroko?ciami - bez parametru width nie by?oby tego testu."
   },
   {
     "question": "Jakie faktyczne parametry ma install() z rich.pretty?",
-    "answer": "install() w test_pretty.py przyjmuje: console (obiekt Console) i opcjonalnie max_depth=1. max_depth kontroluje głębokość zagnieżdżenia przy pretty printing."
+    "answer": "install() w test_pretty.py przyjmuje: console (obiekt Console) i opcjonalnie max_depth=1. max_depth kontroluje g??boko?? zagnie?d?enia przy pretty printing."
   },
   {
-    "question": "Co robi sys.displayhook w kontekście Rich?",
-    "answer": "Rich może zastąpić sys.displayhook swoją funkcją pretty printing. W test_pretty.py install(console) zmienia sys.displayhook, dzięki czemu wszystkie obiekty w REPL są automatycznie formatowane przez Rich."
+    "question": "Co robi sys.displayhook w kontek?cie Rich?",
+    "answer": "Rich mo?e zast?pi? sys.displayhook swoj? funkcj? pretty printing. W test_pretty.py install(console) zmienia sys.displayhook, dzi?ki czemu wszystkie obiekty w REPL s? automatycznie formatowane przez Rich."
   },
   {
-    "question": "Co się stanie jeśli ustawię force_jupyter=True w Console?",
-    "answer": "Console będzie zachowywać się jakby działał w Jupyter Notebook. W test_pretty.py Console(force_jupyter=True) wpływa na sposób działania _ipy_display_hook i obsługę specjalnych metod _repr_*_."
+    "question": "Co si? stanie je?li ustawi? force_jupyter=True w Console?",
+    "answer": "Console b?dzie zachowywa? si? jakby dzia?a? w Jupyter Notebook. W test_pretty.py Console(force_jupyter=True) wp?ywa na spos�b dzia?ania _ipy_display_hook i obs?ug? specjalnych metod _repr_*_."
   },
   {
-    "question": "Jakie specjalne metody obsługuje _ipy_display_hook?",
-    "answer": "Z test_pretty.py widać obsługę: _repr_html_(), _repr_latex_(), _repr_markdown_(). Jeśli obiekt ma te metody, Rich deleguje renderowanie do Jupyter zamiast używać własnego formatowania."
+    "question": "Jakie specjalne metody obs?uguje _ipy_display_hook?",
+    "answer": "Z test_pretty.py wida? obs?ug?: _repr_html_(), _repr_latex_(), _repr_markdown_(). Je?li obiekt ma te metody, Rich deleguje renderowanie do Jupyter zamiast u?ywa? w?asnego formatowania."
   },
   {
-    "question": "Co się stanie jeśli _repr_html_() zwróci None?",
-    "answer": "Rich będzie szukać innych metod _repr_*_ lub użyje standardowego __repr__(). W test_pretty.py gdy _repr_latex_() zwraca None, Rich używa _repr_html_() która zwraca \"hello\"."
+    "question": "Co si? stanie je?li _repr_html_() zwr�ci None?",
+    "answer": "Rich b?dzie szuka? innych metod _repr_*_ lub u?yje standardowego __repr__(). W test_pretty.py gdy _repr_latex_() zwraca None, Rich u?ywa _repr_html_() kt�ra zwraca \"hello\"."
   },
   {
     "question": "Co robi wcwidth w make_terminal_widths.py?",
-    "answer": "wcwidth(chr(codepoint)) oblicza szerokość znaku w komórkach terminala. Rich używa tego do budowania tabeli CELL_WIDTHS która mapuje znaki Unicode na ich szerokości wyświetlania."
+    "answer": "wcwidth(chr(codepoint)) oblicza szeroko?? znaku w kom�rkach terminala. Rich u?ywa tego do budowania tabeli CELL_WIDTHS kt�ra mapuje znaki Unicode na ich szeroko?ci wy?wietlania."
   },
   {
-    "question": "Jakie są faktyczne wartości w DATA w stress_test_pretty.py?",
-    "answer": "DATA to słownik z kluczami 'foo', 'bar', 'Dune' zawierający różne typy Python: listy, tuple, set, None, bool. To testuje jak Pretty radzi sobie z różnymi strukturami danych."
+    "question": "Jakie s? faktyczne warto?ci w DATA w stress_test_pretty.py?",
+    "answer": "DATA to s?ownik z kluczami 'foo', 'bar', 'Dune' zawieraj?cy r�?ne typy Python: listy, tuple, set, None, bool. To testuje jak Pretty radzi sobie z r�?nymi strukturami danych."
   },
   {
-    "question": "Co się stanie jeśli usunę subprocess.run() z make_terminal_widths.py?",
-    "answer": "Wygenerowany plik _cell_widths.py nie będzie sformatowany przez black. Kod będzie działać, ale plik nie będzie miał konsystentnego formatowania zgodnego ze standardami projektu."
+    "question": "Co si? stanie je?li usun? subprocess.run() z make_terminal_widths.py?",
+    "answer": "Wygenerowany plik _cell_widths.py nie b?dzie sformatowany przez black. Kod b?dzie dzia?a?, ale plik nie b?dzie mia? konsystentnego formatowania zgodnego ze standardami projektu."
   },
   {
-    "question": "Jakie parametry ma range() w pętlach testowych?",
-    "answer": "range(10000) w profile_divide.py do testowania wydajności Segment.divide(), range(130) w stress_test_pretty.py do testowania różnych szerokości Panel, range(0, sys.maxunicode + 1) w make_terminal_widths.py do wszystkich znaków Unicode."
+    "question": "Jakie parametry ma range() w p?tlach testowych?",
+    "answer": "range(10000) w profile_divide.py do testowania wydajno?ci Segment.divide(), range(130) w stress_test_pretty.py do testowania r�?nych szeroko?ci Panel, range(0, sys.maxunicode + 1) w make_terminal_widths.py do wszystkich znak�w Unicode."
   },
   {
     "question": "Co robi perf_counter() w profile_divide.py?",
-    "answer": "perf_counter() mierzy czas wykonania z wysoką precyzją. Używany przed i po pętli 10000 iteracji Segment.divide() do benchmarkowania wydajności dzielenia segmentów."
+    "answer": "perf_counter() mierzy czas wykonania z wysok? precyzj?. U?ywany przed i po p?tli 10000 iteracji Segment.divide() do benchmarkowania wydajno?ci dzielenia segment�w."
   },
   {
-    "question": "Co się stanie jeśli zmienię liczbę iteracji z 10000 na 1000 w profile_divide.py?",
-    "answer": "Test wydajności będzie 10 razy szybszy ale mniej precyzyjny. Małe różnice w wydajności mogą być trudniejsze do zmierzenia z mniejszą liczbą iteracji."
+    "question": "Co si? stanie je?li zmieni? liczb? iteracji z 10000 na 1000 w profile_divide.py?",
+    "answer": "Test wydajno?ci b?dzie 10 razy szybszy ale mniej precyzyjny. Ma?e r�?nice w wydajno?ci mog? by? trudniejsze do zmierzenia z mniejsz? liczb? iteracji."
   },
   {
     "question": "Jakie parametry ma emoji.unicode_codes.EMOJI_ALIAS_UNICODE?",
-    "answer": "To słownik mapujący aliasy emoji (z dwukropkami) na znaki Unicode. W make_emoji.py jest przetwarzany do formatu {k.lower().strip(\":\"): v} usuwając dwukropki i zmieniając na małe litery."
+    "answer": "To s?ownik mapuj?cy aliasy emoji na znaki Unicode, np. \":smile:\" -> \"?\". Rich mo?e u?ywa? tego do renderowania emoji w terminalu."
   },
   {
-    "question": "Co robi file.write() w make_emoji.py?",
-    "answer": "f.write(\"EMOJI=\" + str(emoji)) zapisuje słownik emoji do pliku _emoji_codes.py jako zmienną Python EMOJI. To generuje moduł z mapowaniem nazw emoji na znaki Unicode."
+    "question": "Co robi metoda console.clear()?",
+    "answer": "Czy?ci ekran terminala. Przydatne do od?wie?ania wyj?cia w trakcie dzia?ania aplikacji terminalowej."
   },
   {
-    "question": "Jakie są faktyczne typy w typing imports?",
-    "answer": "List[Tuple[int, int, int]] w make_terminal_widths.py dla tabeli szerokości, List[Tuple[int, int, int]] dla funkcji make_widths_table(), Any w test_pretty.py dla różnych typów danych."
-  },
-  {
-    "question": "Co się stanie jeśli usunę List comprehension z make_terminal_widths.py?",
-    "answer": "Kod _widths = [(codepoint, width) for codepoint, width in widths if width != 1] przestanie filtrować znaki o szerokości != 1. Tabela będzie zawierać wszystkie znaki, znacznie zwiększając jej rozmiar."
-  },
-  {
-    "question": "Jakie parametry ma array() w test_pretty.py?",
-    "answer": "from array import array importuje typ array do testowania pretty printing różnych typów kontenerów. Array to wydajny kontener dla liczb jednego typu."
-  },
-  {
-    "question": "Co robi defaultdict w importach test_pretty.py?",
-    "answer": "from collections import defaultdict - defaultdict to słownik który automatycznie tworzy wartości domyślne dla nieistniejących kluczy. Testowany w pretty printing collections."
-  },
-  {
-    "question": "Jakie są faktyczne wersje Python w skip markers?",
-    "answer": "skip_py38, skip_py39, skip_py310, skip_py311, skip_py312, skip_py313 - testy pomijane dla konkretnych wersji Python bo \"rendered differently\". Pokazuje że Rich renderuje inaczej na różnych wersjach."
-  },
-  {
-    "question": "Co kontroluje sys.version_info.minor w test_pretty.py?",
-    "answer": "sys.version_info.minor == 8 sprawdza czy to Python 3.8. Używane w pytest.mark.skipif do pomijania testów które renderują się inaczej na różnych wersjach Python."
-  },
-  {
-    "question": "Co się stanie jeśli usunę @dataclass z importów?",
-    "answer": "Testy dataclasses w pretty printing przestaną działać. @dataclass i field() to dekoratory do automatycznego generowania metod __init__, __repr__ itp. dla klas danych."
-  },
-  {
-    "question": "Jakie parametry ma NamedTuple w importach?",
-    "answer": "from typing import NamedTuple - NamedTuple to typ do tworzenia tuple z nazwanymi polami. Używany w testach pretty printing różnych typów kontenerów."
-  },
-  {
-    "question": "Co robi attr w importach test_pretty.py?",
-    "answer": "import attr - biblioteka attrs do definiowania klas z automatycznymi metodami. Alternatywa dla dataclasses, testowana w pretty printing różnych typów klas."
-  },
-  {
-    "question": "Co się stanie jeśli zmienię ord(character) na coś innego?",
-    "answer": "ord(character) zwraca kod Unicode znaku. W get_cell_size() to kluczowe dla wyszukiwania binarnego w tabeli szerokości. Zmiana złamałaby mapowanie znaków na szerokości."
-  },
-  {
-    "question": "Jakie są rzeczywiste wartości zwracane przez wcwidth()?",
-    "answer": "wcwidth() zwraca int: 0 (znak kontrolny), 1 (normalny), 2 (szeroki jak CJK), -1 (niedrukowalny) lub None. W make_terminal_widths.py filtrowane są tylko znaki != 1."
-  },
-  {
-    "question": "Co robi binary search w get_cell_size()?",
-    "answer": "lower_bound, upper_bound, index = (lower_bound + upper_bound) // 2 implementuje wyszukiwanie binarne w posortowanej tabeli (start, end, width) aby szybko znaleźć szerokość znaku."
-  },
-  {
-    "question": "Co się stanie jeśli upper_bound < lower_bound w get_cell_size()?",
-    "answer": "Funkcja zwróci 1 (domyślną szerokość). To oznacza że znak nie został znaleziony w tabeli szerokości i ma standardową szerokość jednej komórki terminala."
-  },
-  {
-    "question": "Jakie są faktyczne parametry Text() w chunków?",
-    "answer": "Text(path.name, \"green\") w tree.py tworzy tekst z nazwą pliku i zielonym kolorem. Text może przyjmować zawartość jako pierwszy parametr i styl jako drugi."
-  },
-  {
-    "question": "Co robi escape() w rich.markup?",
-    "answer": "escape(path.name) w tree.py escapuje specjalne znaki markup w nazwach plików, żeby [, ] w nazwach nie były interpretowane jako tagi formatowania Rich."
+    "question": "Co si? stanie je?li wywo?am console.status('Loading...') jako context manager?",
+    "answer": "Wy?wietli w terminalu status \"Loading...\" z animacj? spinnera a? do wyj?cia z bloku. Przydatne do pokazywania informacji o trwaj?cych procesach."
   }
 ]

@@ -139,7 +139,7 @@ def chunking(file_path):
             current_chunk_type = "method"
             current_chunk_name = extract_name_from_line(stripped_line, "def")
             chunk_start_line = i
-            current_chunk = f"class {current_class_context}:\n" + line + '\n'
+            current_chunk = line + '\n'
 
 
         elif re.match(r'^def\s+\w+', stripped_line):
@@ -190,9 +190,8 @@ def chunking(file_path):
 
         else:
             # sprawdzam czy opuszczam klase (powrot do poziomu 0 wciecia)
-            if (
-                    current_class_context and indentation <= class_indentation_level and stripped_line and not stripped_line.startswith(
-                    ('@', '#')) and not current_chunk_type in ["method", "function"]):
+            if (current_class_context and indentation <= class_indentation_level and stripped_line
+                and not stripped_line.startswith('@', '#')) and current_chunk_type not in ["method", "function"]:
                 current_class_context = None
 
             # dodaj linie do chunka jesli chunk jest aktywny
@@ -230,7 +229,7 @@ def get_all_chunks(folder_path, output_file):
                     print(f"Error processing {file_path}: {e}")
 
     os.makedirs(os.path.dirname(output_file), exist_ok=True)
-    with open(output_file, "w", encoding="utf-8") as f:
+    with open(output_file, "w", encoding="utf-8-sig") as f:
         json.dump(all_chunks, f, indent=2, ensure_ascii=False)
 
     return all_chunks

@@ -12,7 +12,7 @@ OLLAMA_API_URL = "http://localhost:11434/api/generate"
 MODEL_NAME = "codellama:7b-instruct"
 # CODE_EMBEDDINGS = "embeddings/embedding.jsonl"
 # QA_EMBEDDINGS = "embeddings/qa_embedding.json"
-CODE_EMBEDDINGS = "embeddings/embedding_project_fixed.jsonl"
+CODE_EMBEDDINGS = "embeddings/code_embedding_project_fixed.jsonl"
 QA_EMBEDDINGS = "embeddings/qa_embedding_project_fixed.json"
 #MODEL_NAME_EMBEDDING = "all-MiniLM-L6-v2"
 CODEBERT_MODEL_NAME = "microsoft/codebert-base"
@@ -49,7 +49,8 @@ async def response(prompt: str):
         raise HTTPException(status_code=exc.response.status_code,
             detail=f"Error response {exc.response.status_code} while requesting Ollama API")
     except httpx.RequestError as exc:
-        raise HTTPException(detail=f"An error occurred while requesting Ollama API: {exc}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                            detail=f"An error occurred while requesting Ollama API: {exc}")
 
     except Exception as exc:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -89,8 +90,10 @@ async def ask_rag(req: PrompRequest):
     try:
         matches = similar_questions(req.question, qa_data, model_name=CODEBERT_MODEL_NAME)
         context = "\n\n".join(f"Q: {m[1]['question']}\nA: {m[1]['answer']}" for m in matches)
+        print(context)
         prompt = f"Context:\n{context}\n\nQuestion: {req.question}\nAnswer:"
         answer = await response(prompt)
+        print(answer)
         return {
             "answer": answer,
             "used_context": context}
@@ -111,8 +114,3 @@ async def ask_code_rag(req: PrompRequest):
         }
     except Exception as exc:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error in RAG: {str(exc)}")
-
-
-@app.on_event("shutdown")
-async def shutdown():
-    await client.aclose()

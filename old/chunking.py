@@ -1,5 +1,5 @@
-import os
 import json
+import os
 
 
 def end_of_function(lines, start_idx):
