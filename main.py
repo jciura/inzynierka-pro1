@@ -1,22 +1,26 @@
 import json
 import logging
 import os
+from typing import List
 
 import httpx
-from fastapi import FastAPI, HTTPException, status
+from fastapi import FastAPI, HTTPException, status, Query
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from rag.retriver import similar_questions, similar_code, similar_node
 
-#from rag.generate_embeddings import generate_embeddings
-
-
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-
-
 app = FastAPI()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 OLLAMA_API_URL = "http://localhost:11434/api/generate"
 MODEL_NAME = "codellama:7b-instruct"
@@ -27,6 +31,8 @@ QA_EMBEDDINGS = "embeddings/qa_embedding_project_fixed.json"
 NODE_EMBEDDINGS = "embeddings/node_embedding.json"
 #MODEL_NAME_EMBEDDING = "all-MiniLM-L6-v2"
 CODEBERT_MODEL_NAME = "microsoft/codebert-base"
+BASE_DIR = os.path.abspath("projects")
+
 
 timeout = httpx.Timeout(60.0)
 client = httpx.AsyncClient(timeout=timeout)
@@ -42,8 +48,6 @@ qa_data = load_json(QA_EMBEDDINGS)
 
 class PrompRequest(BaseModel):
     question: str
-    context: str
-
 
 async def response(prompt: str):
     payload = {
@@ -60,7 +64,8 @@ async def response(prompt: str):
         raise HTTPException(status_code=exc.response.status_code,
             detail=f"Error response {exc.response.status_code} while requesting Ollama API")
     except httpx.RequestError as exc:
-        raise HTTPException(detail=f"An error occurred while requesting Ollama API: {exc}")
+        raise HTTPException(sttus_Code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                            detail=f"An error occurred while requesting Ollama API: {exc}")
 
     except Exception as exc:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -149,16 +154,47 @@ async def ask_code_rag(req: PrompRequest):
 async def ask_rag_node(req: PrompRequest):
     try:
         matches = similar_node(req.question, NODE_EMBEDDINGS, model_name=CODEBERT_MODEL_NAME)
-        context = "\n\n".join(m[1]["node"] + ":\n" + m[1].get("content", "") for m in matches)
+        context = "\n\n".join(m[1]["node"] + ":\n" + m[1].get("kind") + ":\n" + m[1].get("code", "") for m in matches)
         prompt = f"Context:\n{context}\n\nQuestion: {req.question}\nAnswer:"
+
         answer = await response(prompt)
         return {
             "answer": answer,
             "used_context": context
         }
     except Exception as exc:
+        logger.error(f"Error in RAG: {str(exc)}", exc_info=True)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error in RAG Node: {str(exc)}")
 
+
+# Listowanie plików w katalogu - potrzebna do frontu
+@app.get("/files", response_model=List[str])
+def list_files(path: str = ""):
+    target_dir = os.path.abspath(os.path.join(BASE_DIR, path))
+    if not target_dir.startswith(BASE_DIR):
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    try:
+        return os.listdir(target_dir)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Folder not found")
+
+
+# Listowanie kodu żródłowego z pliku
+@app.get("/file")
+def get_file(path: str = Query(..., description="Relative path to the file")):
+    file_path = os.path.abspath(os.path.join(BASE_DIR, path))
+    if not file_path.startswith(BASE_DIR):
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    if not os.path.isfile(file_path):
+        raise HTTPException(status_code=404, detail="File not found")
+
+    try:
+        with open(file_path, "r", encoding="utf-8") as f:
+            return {"content": f.read()}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.on_event("shutdown")
 async def shutdown():

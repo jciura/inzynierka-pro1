@@ -4,6 +4,7 @@ import re
 
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.preprocessing import normalize
 
 from graph.generate_embeddings_graph import generate_embeddings_graph
 from rag.generate_embeddings import generate_embeddings
@@ -29,6 +30,9 @@ def calcuate_file_name_similiarity(file_name, target_patterns, target_words):
             return 1.3
     return 1.0
 
+
+def normalize(v):
+    return v / np.linalg.norm(v) if np.linalg.norm(v) > 0 else v
 
 def similar_questions(question, qa_data, model_name="microsoft/codebert-base"):
     question_embedding = generate_embeddings([question], model_name)[0]
@@ -73,17 +77,48 @@ def similar_code(question, code_path, model_name="microsoft/codebert-base", min_
     return results[:6]
 
 
-def similar_node(question, node_embedding_path, model_name="microsoft/codebert-base"):
-    with open(node_embedding_path, "r") as f:
+def extract_key_value_pairs_simple(question):
+    key_terms = {"class", "method", "function", "variable", "property"}
+    words = question.lower().split()
+    pairs = []
+
+    for i, word in enumerate(words):
+        if word in key_terms:
+            # Na razie zakładam że przed słowem kluczowym będzie jego nazwa
+            pairs.append((word, words[i - 1]))
+
+    if not pairs:
+        pairs = [(None, w) for w in words if w not in key_terms and len(w) > 2]
+
+    return pairs
+
+
+def similar_node(question, node_embedding_path, model_name="microsoft/codebert-base", top_k=7):
+    with open(node_embedding_path, "r", encoding="utf-8") as f:
         node_data = json.load(f)
-    question_embedding = generate_embeddings_graph([question], model_name)[0]
+
+    # Wyciagam pary nazwa i typ (np. User Class) i dla każdej pary robię osobno embedding, żeby wyciągnąć dobry kod
+    pairs = extract_key_value_pairs_simple(question)
+
+    embeddings_input = []
+    for key, value in pairs:
+        if key is not None:
+            embeddings_input.append(f"{key} {value}")
+        else:
+            embeddings_input.append(value)
+
+    print(embeddings_input)
+    embeddings_raw = generate_embeddings_graph(embeddings_input, model_name)
+    embeddings = normalize(embeddings_raw)
+
     results = []
     for node in node_data:
-        node_emb = np.array(node["embedding"])
-        score = cosine_similarity([question_embedding], [node_emb])[0][0]
-        importance_combined = node.get("importance", {}).get("combined", 1.0)
-        final_score = score * importance_combined
+        node_emb_raw = np.array(node["embedding"])
+        node_emb = normalize([node_emb_raw])[0]
+        score = [cosine_similarity([emb], [node_emb])[0][0] for emb in embeddings]
+        # Mnożenie wyniki przez combined importance pogorszyło wynik bo zwraca jakieś losowe węzły, które są uznane za ważne;
+        final_score = max(score)
         results.append((final_score, node))
 
     results.sort(reverse=True, key=lambda x: x[0])
-    return results[:7]
+    return results[:top_k]

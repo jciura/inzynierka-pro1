@@ -4,7 +4,7 @@
 
 4. scg-cli generate <Sciezka> - najpierw generuje się zawsze dla projektu pojedyncze grafy semantyczne, bez tego reszata
    nie dziala
-5. scg-cli export -g CCN -o gdf <Sciezka> - export całego grafu do pliku .gdf
+5. scg-cli export -g SCG -o gdf <Sciezka> - export całego grafu do pliku .gdf
 6. scg-cli summary -g SCG <Sciezka> - szybkie podsumiwanie projektu
 7. scg-cli crucial <Sciezka> -n k; k - ile bierzemy węzłów o najwyższych wartościach, raczej chcemy podawać all, żeby
    każdy embedding miał te wartości, a nie tylko wybrane
@@ -13,4 +13,5 @@
 10. Przy zmianie scg-cli wywołać: sbt clean universal:packageBin, żeby wygenerować nową paczkę
 11. Na razie testowy projekt to projekt w springu do zapisywania się na webinary i zarządzania
     nimi: https://github.com/jciura/test_project - wrzucić do projects i zmienić
-    nazwę na test 
+    nazwę na test; Na razie nie trzeba pobierać potrzebne pliki z scg-cli są wygenerowane w /projects
+12. python -m spacy download en_core_web_sm
