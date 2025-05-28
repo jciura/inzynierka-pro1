@@ -143,11 +143,17 @@ def similar_node(question, node_embedding_path, node_history_path, model_name="m
         neigbors = node.get("related_entities", [])
         all_neighbors_ids.update(neigbors)
 
+    sorted_neighbors = sorted(
+        all_neighbors_ids,
+        key=lambda nid: id_to_node.get(nid, {}).get("importance", {}).get("combined", 0.0),
+        reverse=True
+    )
+
     print("Neigbours:")
-    for neighbor in all_neighbors_ids:
+    for neighbor in sorted_neighbors:
         print(neighbor)
 
-    neighbor_codes = [id_to_node[nid]["code"] for nid in all_neighbors_ids if nid in id_to_node][:5]
+    neighbor_codes = [id_to_node[nid]["code"] for nid in sorted_neighbors if nid in id_to_node][:5]
 
     all_codes = top_k_codes + [code for code in neighbor_codes if code not in top_k_codes]
 

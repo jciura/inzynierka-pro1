@@ -165,7 +165,6 @@ if __name__ == "__main__":
         related_entities = sorted(
             scg_neighbors.union(used_by).union(extra_related),
             key=lambda nid: importance_scores["combined"].get(nid, 0.0),
-            # sortowanie po loc, żeby przy wyciąganiu related_entities wybierać klasy a nie metody z przetwarzanej klasy
             reverse=True
         )
 
