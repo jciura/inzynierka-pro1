@@ -93,9 +93,19 @@ def extract_key_value_pairs_simple(question):
     return pairs
 
 
-def similar_node(question, node_embedding_path, model_name="microsoft/codebert-base", top_k=7):
+def filter_repeated_codes(old_context, codes):
+    filtered_codes = []
+    for code in codes:
+        if code not in old_context:
+            filtered_codes.append(code)
+    return filtered_codes
+
+
+def similar_node(question, node_embedding_path, node_history_path, model_name="microsoft/codebert-base", top_k=7):
     with open(node_embedding_path, "r", encoding="utf-8") as f:
         node_data = json.load(f)
+
+    id_to_node = {node["node"]: node for node in node_data}
 
     # Wyciagam pary nazwa i typ (np. User Class) i dla każdej pary robię osobno embedding, żeby wyciągnąć dobry kod
     pairs = extract_key_value_pairs_simple(question)
@@ -121,4 +131,42 @@ def similar_node(question, node_embedding_path, model_name="microsoft/codebert-b
         results.append((final_score, node))
 
     results.sort(reverse=True, key=lambda x: x[0])
-    return results[:top_k]
+    top_nodes = results[:len(embeddings_input)]
+    top_k_codes = [node["code"] for _, node in top_nodes]
+
+    print("Top nodes:")
+    for _, nod in top_nodes:
+        print(nod["node"])
+
+    all_neighbors_ids = set()
+    for _, node in top_nodes:
+        neigbors = node.get("related_entities", [])
+        all_neighbors_ids.update(neigbors)
+
+    print("Neigbours:")
+    for neighbor in all_neighbors_ids:
+        print(neighbor)
+
+    neighbor_codes = [id_to_node[nid]["code"] for nid in all_neighbors_ids if nid in id_to_node][:5]
+
+    all_codes = top_k_codes + [code for code in neighbor_codes if code not in top_k_codes]
+
+    with open(node_history_path, "r", encoding="utf-8") as f:
+        history = json.load(f)
+        last_n = 3
+        recent_history = history[-last_n:] if len(history) >= last_n else history
+        old_context_parts = []
+        old_context_codes = []
+        for h in recent_history:
+            old_context_parts.append(
+                f"Q: {h.get('question', '')}\nContext:\n{h.get('context', '')}\nA: {h.get('answer', '')}\n")
+            old_context_codes.append(h.get('context', ''))
+        old_context = "\n---\n".join(old_context_parts)
+        old_context_code = "\n\n".join(old_context_codes)
+
+    filtered_codes = filter_repeated_codes(old_context_code, all_codes)
+
+    joined_codes = "\n\n".join(filtered_codes)
+    full_context = f"{old_context}\n\n---\n\n{joined_codes}"
+
+    return top_nodes, full_context

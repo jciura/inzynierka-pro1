@@ -1,5 +1,6 @@
 import json
 import re
+from collections import defaultdict
 
 import torch
 from sklearn.preprocessing import normalize
@@ -119,13 +120,20 @@ def node_to_text(data):
 
 if __name__ == "__main__":
     MODEL_NAME = "microsoft/codebert-base"
-    g = load_gdf('../projects/test.gdf')
+    scg = load_gdf('../projects/scgTest.gdf')
+    ccn = load_gdf('../projects/ccnTest.gdf')
     importance_scores = extract_scores("../projects/partition.js")
+
+    reverse_ccn_map = defaultdict(list)
+    for node_id in ccn.nodes():
+        for neighbor in ccn.neighbors(node_id):
+            reverse_ccn_map[neighbor].append(node_id)
+
 
     nodes_info = []
     texts_for_embedding = []
 
-    for node_id, data in g.nodes(data=True):
+    for node_id, data in scg.nodes(data=True):
         node_text = node_to_text(data)
         nodes_info.append({
             "node_id": node_id,
@@ -136,20 +144,39 @@ if __name__ == "__main__":
         texts_for_embedding.append(
             node_text["text"].lower())  # lower() żeby embeddingi były podobne dla pytań z rożnymi wielkościami liter
 
-    print("convert ok")
 
     embeddings = generate_embeddings_graph(texts_for_embedding, MODEL_NAME)
 
     json_data = []
-    print("embeddingi ok")
     for info, emb in zip(nodes_info, embeddings):
         node_id = info["node_id"]
+        #
+        scg_neighbors = set(scg.neighbors(node_id)) if scg.has_node(node_id) else set()
+        # Z grafu ccn pobieramy klasy które używaja danej klasy żeby dodać je do related_entities
+        used_by = set(reverse_ccn_map[node_id]) if node_id in reverse_ccn_map else set()
+
+        # Dla każdej metody z danej klasy pobieramy klasy w jakich dana klasa jest używana, bo może tam być użyta ta metoda
+        extra_related = set()
+        if info["kind"] == "METHOD":
+            class_id = node_id.split('(')[0].rsplit('.', 1)[0]
+            if class_id in reverse_ccn_map:
+                extra_related.update(reverse_ccn_map[class_id])
+
+        related_entities = sorted(
+            scg_neighbors.union(used_by).union(extra_related),
+            key=lambda nid: importance_scores["combined"].get(nid, 0.0),
+            # sortowanie po loc, żeby przy wyciąganiu related_entities wybierać klasy a nie metody z przetwarzanej klasy
+            reverse=True
+        )
+
+        for nid in related_entities:
+            print(nid, importance_scores["combined"].get(nid, 0.0))
+
         json_data.append({
             "node": node_id,
             "kind": info["kind"],
             "label": info["label"],
-            "code": info["code"],
-            "embedding": emb.tolist(),
+            "related_entities": related_entities,
             "importance": {
                 "loc": importance_scores['loc'].get(node_id, 0.0),
                 "out-degree": importance_scores['out-degree'].get(node_id, 0.0),
@@ -158,7 +185,9 @@ if __name__ == "__main__":
                 "eigenvector": importance_scores['eigenvector'].get(node_id, 0.0),
                 "katz": importance_scores['Katz'].get(node_id, 0.0),
                 "combined": importance_scores['combined'].get(node_id, 0.0),
-            }
+            },
+            "code": info["code"],
+            "embedding": emb.tolist()
         })
 
     with open("../embeddings/node_embedding.json", "w", encoding="utf-8") as f:

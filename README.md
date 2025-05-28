@@ -13,5 +13,4 @@
 10. Przy zmianie scg-cli wywołać: sbt clean universal:packageBin, żeby wygenerować nową paczkę
 11. Na razie testowy projekt to projekt w springu do zapisywania się na webinary i zarządzania
     nimi: https://github.com/jciura/test_project - wrzucić do projects i zmienić
-    nazwę na test; Na razie nie trzeba pobierać potrzebne pliki z scg-cli są wygenerowane w /projects
-12. python -m spacy download en_core_web_sm
+    nazwę na test; Na razie nie trzeba pobierać potrzebne pliki z scg-cli są wygenerowane w /project

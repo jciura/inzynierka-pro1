@@ -29,7 +29,9 @@ MODEL_NAME = "codellama:7b-instruct"
 CODE_EMBEDDINGS = "embeddings/embedding_project_fixed.jsonl"
 QA_EMBEDDINGS = "embeddings/qa_embedding_project_fixed.json"
 NODE_EMBEDDINGS = "embeddings/node_embedding.json"
+NODE_CONTEXT_HISTORY = "embeddings/node_context_history.json"
 #MODEL_NAME_EMBEDDING = "all-MiniLM-L6-v2"
+HISTORY_LIMIT = 20
 CODEBERT_MODEL_NAME = "microsoft/codebert-base"
 BASE_DIR = os.path.abspath("projects")
 
@@ -153,17 +155,33 @@ async def ask_code_rag(req: PrompRequest):
 @app.post("/ask_rag_node")
 async def ask_rag_node(req: PrompRequest):
     try:
-        matches = similar_node(req.question, NODE_EMBEDDINGS, model_name=CODEBERT_MODEL_NAME)
-        context = "\n\n".join(m[1]["node"] + ":\n" + m[1].get("kind") + ":\n" + m[1].get("code", "") for m in matches)
+        matches, context = similar_node(req.question, NODE_EMBEDDINGS, NODE_CONTEXT_HISTORY,
+                                        model_name=CODEBERT_MODEL_NAME)
         prompt = f"Context:\n{context}\n\nQuestion: {req.question}\nAnswer:"
 
         answer = await response(prompt)
+
+        with open(NODE_CONTEXT_HISTORY, "r", encoding="utf-8") as f:
+            history = json.load(f)
+
+        history.append({
+            "question": req.question,
+            "context": context,
+            "answer": answer
+        })
+
+        if len(history) > HISTORY_LIMIT:
+            history = history[-HISTORY_LIMIT:]
+
+        with open(NODE_CONTEXT_HISTORY, "w", encoding="utf-8") as f:
+            json.dump(history, f, ensure_ascii=False, indent=4)
+
         return {
             "answer": answer,
             "used_context": context
         }
     except Exception as exc:
-        logger.error(f"Error in RAG: {str(exc)}", exc_info=True)
+        logger.error(f"Error in RAG Node: {str(exc)}", exc_info=True)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error in RAG Node: {str(exc)}")
 
 
