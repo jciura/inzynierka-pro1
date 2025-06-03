@@ -153,7 +153,7 @@ def similar_node(question, node_embedding_path, node_history_path, model_name="m
     for neighbor in sorted_neighbors:
         print(neighbor)
 
-    neighbor_codes = [id_to_node[nid]["code"] for nid in sorted_neighbors if nid in id_to_node][:5]
+    neighbor_codes = [id_to_node[nid]["code"] for nid in sorted_neighbors if nid in id_to_node][:1]
 
     all_codes = top_k_codes + [code for code in neighbor_codes if code not in top_k_codes]
 

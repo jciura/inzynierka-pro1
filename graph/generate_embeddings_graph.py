@@ -168,9 +168,6 @@ if __name__ == "__main__":
             reverse=True
         )
 
-        for nid in related_entities:
-            print(nid, importance_scores["combined"].get(nid, 0.0))
-
         json_data.append({
             "node": node_id,
             "kind": info["kind"],

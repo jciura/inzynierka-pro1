@@ -63,15 +63,28 @@ async def response(prompt: str):
         result = response.json()
         return result["response"]
     except httpx.HTTPStatusError as exc:
-        raise HTTPException(status_code=exc.response.status_code,
-            detail=f"Error response {exc.response.status_code} while requesting Ollama API")
-    except httpx.RequestError as exc:
-        raise HTTPException(sttus_Code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                            detail=f"An error occurred while requesting Ollama API: {exc}")
+        try:
+            error_details = exc.response.json()
+        except Exception:
+            error_details = exc.response.text
 
+        logger.error(f"Ollama API returned an error: {exc.response.status_code} - {error_details}")
+        raise HTTPException(
+            status_code=exc.response.status_code,
+            detail=f"Ollama API error {exc.response.status_code}: {error_details}"
+        )
+    except httpx.RequestError as exc:
+        logger.error(f"Request error while calling Ollama API: {exc}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Request error while calling Ollama API: {exc}"
+        )
     except Exception as exc:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                            detail=f"Unexpected error: {exc}")
+        logger.error(f"Unexpected error: {exc}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Unexpected error: {exc}"
+        )
 
 
 @app.post("/ask")
