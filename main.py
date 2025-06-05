@@ -31,12 +31,11 @@ QA_EMBEDDINGS = "embeddings/qa_embedding_project_fixed.json"
 NODE_EMBEDDINGS = "embeddings/node_embedding.json"
 NODE_CONTEXT_HISTORY = "embeddings/node_context_history.json"
 #MODEL_NAME_EMBEDDING = "all-MiniLM-L6-v2"
-HISTORY_LIMIT = 20
+HISTORY_LIMIT = 5
 CODEBERT_MODEL_NAME = "microsoft/codebert-base"
 BASE_DIR = os.path.abspath("projects")
 
-
-timeout = httpx.Timeout(60.0)
+timeout = httpx.Timeout(120.0)
 client = httpx.AsyncClient(timeout=timeout)
 
 
@@ -50,6 +49,8 @@ qa_data = load_json(QA_EMBEDDINGS)
 
 class PrompRequest(BaseModel):
     question: str
+    context: str = ""
+    history: List[dict] = []
 
 async def response(prompt: str):
     payload = {
@@ -168,23 +169,35 @@ async def ask_code_rag(req: PrompRequest):
 @app.post("/ask_rag_node")
 async def ask_rag_node(req: PrompRequest):
     try:
-        matches, context = similar_node(req.question, NODE_EMBEDDINGS, NODE_CONTEXT_HISTORY,
-                                        model_name=CODEBERT_MODEL_NAME)
-        prompt = f"Context:\n{context}\n\nQuestion: {req.question}\nAnswer:"
+        matches, context = similar_node(req.question, model_name=CODEBERT_MODEL_NAME)
+
+        try:
+            with open(NODE_CONTEXT_HISTORY, "r", encoding="utf-8") as f:
+                history = json.load(f)
+        except FileNotFoundError:
+            history = []
+
+        prompt_parts = []
+        if context:
+            prompt_parts.append(f"Context:\n{context}\n")
+
+        for msg in history:
+            role = msg.get("role", "user").capitalize()
+            content = msg.get("content", "")
+            prompt_parts.append(f"{role}: {content}")
+
+        prompt_parts.append(f"User: {req.question}")
+        prompt_parts.append("Assistant:")
+
+        prompt = "\n".join(prompt_parts)
 
         answer = await response(prompt)
 
-        with open(NODE_CONTEXT_HISTORY, "r", encoding="utf-8") as f:
-            history = json.load(f)
+        history.append({"role": "user", "content": req.question})
+        history.append({"role": "assistant", "content": answer})
 
-        history.append({
-            "question": req.question,
-            "context": context,
-            "answer": answer
-        })
-
-        if len(history) > HISTORY_LIMIT:
-            history = history[-HISTORY_LIMIT:]
+        if len(history) > HISTORY_LIMIT * 2:
+            history = history[-HISTORY_LIMIT * 2:]
 
         with open(NODE_CONTEXT_HISTORY, "w", encoding="utf-8") as f:
             json.dump(history, f, ensure_ascii=False, indent=4)
@@ -193,6 +206,7 @@ async def ask_rag_node(req: PrompRequest):
             "answer": answer,
             "used_context": context
         }
+
     except Exception as exc:
         logger.error(f"Error in RAG Node: {str(exc)}", exc_info=True)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error in RAG Node: {str(exc)}")

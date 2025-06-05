@@ -2,13 +2,18 @@ import json
 import logging as logger
 import re
 
+import chromadb
 import numpy as np
+from chromadb.config import Settings
 from sklearn.metrics.pairwise import cosine_similarity
-from sklearn.preprocessing import normalize
 
 from graph.generate_embeddings_graph import generate_embeddings_graph
 from rag.generate_embeddings import generate_embeddings
 
+chroma_client = chromadb.PersistentClient(
+    path="embeddings/chroma_storage",
+    settings=Settings(allow_reset=False)
+)
 
 def extract_file_name_from_question(question):
     file_patterns = re.findall(r'\b[\w-]+\.[\w]+\b', question.lower())
@@ -84,7 +89,6 @@ def extract_key_value_pairs_simple(question):
 
     for i, word in enumerate(words):
         if word in key_terms:
-            # Na razie zakładam że przed słowem kluczowym będzie jego nazwa
             pairs.append((word, words[i - 1]))
 
     if not pairs:
@@ -101,78 +105,88 @@ def filter_repeated_codes(old_context, codes):
     return filtered_codes
 
 
-def similar_node(question, node_embedding_path, node_history_path, model_name="microsoft/codebert-base", top_k=7):
-    with open(node_embedding_path, "r", encoding="utf-8") as f:
-        node_data = json.load(f)
-
-    id_to_node = {node["node"]: node for node in node_data}
-
-    # Wyciagam pary nazwa i typ (np. User Class) i dla każdej pary robię osobno embedding, żeby wyciągnąć dobry kod
+def similar_node(question, model_name="microsoft/codebert-base", top_k=7):
+    collection = chroma_client.get_collection(name="scg_embeddings")
     pairs = extract_key_value_pairs_simple(question)
 
     embeddings_input = []
     for key, value in pairs:
-        if key is not None:
-            embeddings_input.append(f"{key} {value}")
-        else:
-            embeddings_input.append(value)
+        embeddings_input.append(f"{key} {value}" if key else value)
 
-    print(embeddings_input)
-    embeddings_raw = generate_embeddings_graph(embeddings_input, model_name)
-    embeddings = normalize(embeddings_raw)
+    if not embeddings_input:
+        embeddings_input = [question]
+
+    query_embeddings = generate_embeddings_graph(embeddings_input, model_name)
 
     results = []
-    for node in node_data:
-        node_emb_raw = np.array(node["embedding"])
-        node_emb = normalize([node_emb_raw])[0]
-        score = [cosine_similarity([emb], [node_emb])[0][0] for emb in embeddings]
-        # Mnożenie wyniki przez combined importance pogorszyło wynik bo zwraca jakieś losowe węzły, które są uznane za ważne;
-        final_score = max(score)
-        results.append((final_score, node))
+    for query_emb in query_embeddings:
+        try:
+            query_result = collection.query(
+                query_embeddings=[query_emb.tolist()],
+                n_results=top_k,
+                include=["embeddings", "metadatas", "documents", "distances"]
+            )
 
-    results.sort(reverse=True, key=lambda x: x[0])
-    top_nodes = results[:len(embeddings_input)]
-    top_k_codes = [node["code"] for _, node in top_nodes]
+            for i in range(len(query_result["ids"][0])):
+                score = 1 - query_result["distances"][0][i]
+                node_id = query_result["ids"][0][i]
+                metadata = query_result["metadatas"][0][i]
+                code = query_result["documents"][0][i]
+                results.append((score, {
+                    "node": node_id,
+                    "metadata": metadata,
+                    "code": code
+                }))
+        except Exception as e:
+            print(f"Error querying collection: {e}")
 
-    print("Top nodes:")
-    for _, nod in top_nodes:
-        print(nod["node"])
+    seen = set()
+    unique_results = []
+    for score, node in sorted(results, key=lambda x: -x[0]):
+        if node["node"] not in seen:
+            unique_results.append((score, node))
+            seen.add(node["node"])
+        if len(unique_results) >= len(embeddings_input) * top_k:
+            break
+
+    top_nodes = unique_results[:len(embeddings_input)]
+    top_k_codes = [node["code"] for _, node in top_nodes if node["code"]]
 
     all_neighbors_ids = set()
     for _, node in top_nodes:
-        neigbors = node.get("related_entities", [])
-        all_neighbors_ids.update(neigbors)
+        neighbors = node["metadata"].get("related_entities", [])
+        all_neighbors_ids.update(neighbors)
 
-    sorted_neighbors = sorted(
-        all_neighbors_ids,
-        key=lambda nid: id_to_node.get(nid, {}).get("importance", {}).get("combined", 0.0),
-        reverse=True
-    )
+    neighbor_codes = []
+    if all_neighbors_ids:
+        try:
+            neighbor_nodes = collection.get(
+                ids=list(all_neighbors_ids),
+                include=["documents", "metadatas"]
+            )
 
-    print("Neigbours:")
-    for neighbor in sorted_neighbors:
-        print(neighbor)
+            neighbors_with_scores = []
+            for i in range(len(neighbor_nodes["ids"])):
+                nid = neighbor_nodes["ids"][i]
+                meta = neighbor_nodes["metadatas"][i]
+                doc = neighbor_nodes["documents"][i]
 
-    neighbor_codes = [id_to_node[nid]["code"] for nid in sorted_neighbors if nid in id_to_node][:1]
+                if doc:
+                    score = meta.get("combined", 0.0)
+                    neighbors_with_scores.append((score, nid, doc))
 
-    all_codes = top_k_codes + [code for code in neighbor_codes if code not in top_k_codes]
+            sorted_neighbors = sorted(neighbors_with_scores, key=lambda x: -x[0])
+            neighbor_codes = [doc for _, _, doc in sorted_neighbors[:2]]
+        except Exception as e:
+            print(f"Error getting neighbors: {e}")
 
-    with open(node_history_path, "r", encoding="utf-8") as f:
-        history = json.load(f)
-        last_n = 3
-        recent_history = history[-last_n:] if len(history) >= last_n else history
-        old_context_parts = []
-        old_context_codes = []
-        for h in recent_history:
-            old_context_parts.append(
-                f"Q: {h.get('question', '')}\nContext:\n{h.get('context', '')}\nA: {h.get('answer', '')}\n")
-            old_context_codes.append(h.get('context', ''))
-        old_context = "\n---\n".join(old_context_parts)
-        old_context_code = "\n\n".join(old_context_codes)
+    all_codes = []
+    seen_codes = set()
 
-    filtered_codes = filter_repeated_codes(old_context_code, all_codes)
+    for code in top_k_codes + neighbor_codes:
+        if code and code not in seen_codes and not code.startswith("<"):
+            all_codes.append(code)
+            seen_codes.add(code)
 
-    joined_codes = "\n\n".join(filtered_codes)
-    full_context = f"{old_context}\n\n---\n\n{joined_codes}"
-
+    full_context = "\n\n".join(all_codes) if all_codes else "<NO CONTEXT FOUND>"
     return top_nodes, full_context
