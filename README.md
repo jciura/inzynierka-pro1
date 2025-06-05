@@ -14,3 +14,6 @@
 11. Na razie testowy projekt to projekt w springu do zapisywania się na webinary i zarządzania
     nimi: https://github.com/jciura/test_project - wrzucić do projects i zmienić
     nazwę na test; Na razie nie trzeba pobierać potrzebne pliki z scg-cli są wygenerowane w /projects 
+
+12. Link do wtyczki do intellij - https://github.com/jciura/CodeAssistant - trzeba uruchomić to w intellij, on
+     włączy nową instancję intellij, gdzie trzeba otworzyć projekt i wtyczka jest tam zaimportowana - najniższa ikona po prawej stronie.
