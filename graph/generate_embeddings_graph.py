@@ -166,7 +166,7 @@ if __name__ == "__main__":
             "node": node_id,
             "kind": info["kind"],
             "label": info["label"],
-            "related_entities": json.dumps(related_entities),  # Convert list to JSON string
+            "related_entities": json.dumps(related_entities),
             "loc": importance_scores['loc'].get(node_id, 0.0),
             "out_degree": importance_scores['out-degree'].get(node_id, 0.0),
             "in_degree": importance_scores['in-degree'].get(node_id, 0.0),

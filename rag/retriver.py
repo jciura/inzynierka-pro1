@@ -5,10 +5,16 @@ import re
 import chromadb
 import numpy as np
 from chromadb.config import Settings
+from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 
 from graph.generate_embeddings_graph import generate_embeddings_graph
 from rag.generate_embeddings import generate_embeddings
+
+with open("embeddings/classifier_example_embeddings.json", "r", encoding="utf-8") as f:
+    classifier_embeddings = json.load(f)
+
+classifier_model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
 
 chroma_client = chromadb.PersistentClient(
     path="embeddings/chroma_storage",
@@ -105,6 +111,33 @@ def filter_repeated_codes(old_context, codes):
     return filtered_codes
 
 
+def classify_question(question):
+    question_emb = classifier_model.encode([question], convert_to_tensor=False)[0]
+
+    best_score = -1
+    best_label = "general"
+
+    for label, examples in classifier_embeddings.items():
+        for emb in examples:
+            score = cosine_similarity([question_emb], [emb])[0][0]
+            if score > best_score:
+                best_score = score
+                best_label = label
+
+    return best_label
+
+
+def preprocess_question(q: str) -> str:
+    q = re.sub(r'\bmethod\s+\w+\b', 'method', q, flags=re.IGNORECASE)
+    q = re.sub(r'\bfunction\s+\w+\b', 'function', q, flags=re.IGNORECASE)
+    q = re.sub(r'\bclass\s+\w+\b', 'class', q, flags=re.IGNORECASE)
+    q = re.sub(r'\bvariable\s+\w+\b', 'variable', q, flags=re.IGNORECASE)
+
+    q = re.sub(r'\s+', ' ', q).strip()
+
+    return q.lower()
+
+
 def similar_node(question, model_name="microsoft/codebert-base", top_k=7):
     collection = chroma_client.get_collection(name="scg_embeddings")
     pairs = extract_key_value_pairs_simple(question)
@@ -152,6 +185,11 @@ def similar_node(question, model_name="microsoft/codebert-base", top_k=7):
     top_nodes = unique_results[:len(embeddings_input)]
     top_k_codes = [node["code"] for _, node in top_nodes if node["code"]]
 
+    category = classify_question(preprocess_question(question))
+    max_neighbors = {"general": 5, "medium": 3, "specific": 1}.get(category, 2)
+
+    print(category)
+
     all_neighbors_ids = set()
     for _, node in top_nodes:
         neighbors = node["metadata"].get("related_entities", [])
@@ -176,7 +214,7 @@ def similar_node(question, model_name="microsoft/codebert-base", top_k=7):
                     neighbors_with_scores.append((score, nid, doc))
 
             sorted_neighbors = sorted(neighbors_with_scores, key=lambda x: -x[0])
-            neighbor_codes = [doc for _, _, doc in sorted_neighbors[:2]]
+            neighbor_codes = [doc for _, _, doc in sorted_neighbors[:max_neighbors]]
         except Exception as e:
             print(f"Error getting neighbors: {e}")
 
@@ -188,5 +226,24 @@ def similar_node(question, model_name="microsoft/codebert-base", top_k=7):
             all_codes.append(code)
             seen_codes.add(code)
 
-    full_context = "\n\n".join(all_codes) if all_codes else "<NO CONTEXT FOUND>"
-    return top_nodes, full_context
+    full_context = "\n\n".join(all_codes)
+
+    if not all_codes and category == "general":
+        try:
+            all_nodes = collection.get(include=["documents", "metadatas", "ids"])
+            importance_scores = []
+            for i in range(len(all_nodes["ids"])):
+                doc = all_nodes["documents"][i]
+                meta = all_nodes["metadatas"][i]
+                nid = all_nodes["ids"][i]
+                score = meta.get("importance", {}).get("combined", 0.0)
+                if doc:
+                    importance_scores.append((score, nid, doc))
+            sorted_by_importance = sorted(importance_scores, key=lambda x: -x[0])
+            fallback_docs = [doc for _, _, doc in sorted_by_importance[:5]]
+            full_context = "\n\n".join(fallback_docs)
+        except Exception as e:
+            print(f"Error retrieving fallback for general question: {e}")
+            full_context = "<NO CONTEXT FOUND>"
+
+    return top_nodes, full_context or "<NO CONTEXT FOUND>"
