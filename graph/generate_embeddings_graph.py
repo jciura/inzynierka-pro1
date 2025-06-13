@@ -7,7 +7,7 @@ import chromadb
 import torch
 from chromadb.config import Settings
 from sklearn.preprocessing import normalize
-from transformers import AutoTokenizer, AutoModel
+
 
 from graph.load_graph import load_gdf, extract_scores
 
@@ -25,20 +25,17 @@ def mean_pooling(token_embeddings, attention_mask):
 
 
 def generate_embeddings_graph(texts, model_name, batch_size=2):
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
-    model = AutoModel.from_pretrained(model_name).to(device)
-    model.eval()
-
+    from rag_optimization import get_codebert_model
+    _codebert_model, _codebert_tokenzier, _device = get_codebert_model()
     embeddings = []
     with torch.no_grad():
         for i in range(0, len(texts), batch_size):
             batch = texts[i:i + batch_size]
-            encoded_input = tokenizer(
+            encoded_input = _codebert_tokenzier(
                 batch, padding=True, truncation=True, max_length=512, return_tensors='pt'
             )
-            encoded_input = {k: v.to(device) for k, v in encoded_input.items()}
-            model_output = model(**encoded_input)
+            encoded_input = {k: v.to(_device) for k, v in encoded_input.items()}
+            model_output = _codebert_model(**encoded_input)
             batch_embeddings = mean_pooling(model_output.last_hidden_state, encoded_input['attention_mask'])
             embeddings.extend(batch_embeddings.cpu().numpy())
 

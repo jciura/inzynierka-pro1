@@ -2,6 +2,7 @@ import json
 import logging
 import os
 from typing import List
+import time
 
 import httpx
 from fastapi import FastAPI, HTTPException, status, Query
@@ -9,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from rag.retriver import similar_questions, similar_code, similar_node
+from rag.similar_node_optimization import similar_node_fast
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -39,18 +41,32 @@ timeout = httpx.Timeout(120.0)
 client = httpx.AsyncClient(timeout=timeout)
 
 
-def load_json(file_path):
-    with open(file_path, "r") as f:
-        return json.load(f)
+def warm_up_models():
+    logger.info("Warming up models...")
+    start_time = time.time()
 
+    try:
+        from rag.similar_node_optimization import get_graph_model
+        from rag_optimization import _get_cached_model
 
-qa_data = load_json(QA_EMBEDDINGS)
+        get_graph_model()
+        logger.info("Graph model zaladowany")
+
+        _get_cached_model()
+        logger.info("CodeBERT model zaladowany")
+
+        warum_time = time.time() - start_time
+        logger.info(f"RAG models zaladowane w {warum_time:.2f}s")
+
+    except Exception as e:
+        logger.error("Model warum failed")
 
 
 class PrompRequest(BaseModel):
     question: str
     context: str = ""
     history: List[dict] = []
+
 
 async def response(prompt: str):
     payload = {
@@ -116,18 +132,6 @@ async def ask_code(file_path: str, question: str):
     return await ask(prompt_request)
 
 
-@app.post("/ask_rag_questions")
-async def ask_rag(req: PrompRequest):
-    try:
-        matches = similar_questions(req.question, qa_data, model_name=CODEBERT_MODEL_NAME)
-        context = "\n\n".join(f"Q: {m[1]['question']}\nA: {m[1]['answer']}" for m in matches)
-        prompt = f"Context:\n{context}\n\nQuestion: {req.question}\nAnswer:"
-        answer = await response(prompt)
-        return {
-            "answer": answer,
-            "used_context": context}
-    except Exception as exc:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error in RAG: {str(exc)}")
 
 
 @app.post("/ask_rag_code")
@@ -168,15 +172,24 @@ async def ask_code_rag(req: PrompRequest):
 
 @app.post("/ask_rag_node")
 async def ask_rag_node(req: PrompRequest):
-    try:
-        matches, context = similar_node(req.question, model_name=CODEBERT_MODEL_NAME)
 
+    total_start_time = time.time()
+    try:
+
+        rag_start_time = time.time()
+        matches, context = similar_node_fast(req.question, model_name=CODEBERT_MODEL_NAME)
+        rag_time = time.time() - rag_start_time
+
+        history_start_time = time.time()
         try:
             with open(NODE_CONTEXT_HISTORY, "r", encoding="utf-8") as f:
                 history = json.load(f)
         except FileNotFoundError:
             history = []
+        history_time = time.time() - history_start_time
+        logger.info(f"Hisotria zaladowana: {history_time:.3f}s - {len(history)} wiadomosci")
 
+        prompt_start_time = time.time()
         prompt_parts = []
         if context:
             prompt_parts.append(f"Context:\n{context}\n")
@@ -190,9 +203,17 @@ async def ask_rag_node(req: PrompRequest):
         prompt_parts.append("Assistant:")
 
         prompt = "\n".join(prompt_parts)
+        prompt_time = time.time() - prompt_start_time
+        logger.info(f"Prompt stworzony {prompt_time:.3f}s, dlugosc: {len(prompt)} znakow")
 
+
+        llm_start_time = time.time()
         answer = await response(prompt)
+        llm_time = time.time() - llm_start_time
+        logger.info(f"LLM odpowiedz {llm_time:.3f}s, dlugosc odpowiedzi: {len(answer)} znakow")
 
+
+        history_save_start_time = time.time()
         history.append({"role": "user", "content": req.question})
         history.append({"role": "assistant", "content": answer})
 
@@ -202,6 +223,8 @@ async def ask_rag_node(req: PrompRequest):
         with open(NODE_CONTEXT_HISTORY, "w", encoding="utf-8") as f:
             json.dump(history, f, ensure_ascii=False, indent=4)
 
+        history_save_time = time.time() - history_save_start_time
+        logger.info(f"Hstoria zapisana: {history_save_time: .3f}s")
         return {
             "answer": answer,
             "used_context": context
@@ -241,6 +264,61 @@ def get_file(path: str = Query(..., description="Relative path to the file")):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
+
+@app.on_event("startup")
+async def startup_event():
+
+    warm_up_models()
+
+    try:
+        logger.info("Starting model warmup...")
+        try:
+            health_response = await client.get("http://localhost:11434/api/tags")
+            health_response.raise_for_status()
+            logger.info("Ollama server is running")
+        except httpx.ConnectError:
+            logger.error("Cannot connect to Ollama server")
+            return
+        except Exception as e:
+            logger.warning(f"Health check failed: {e}")
+
+        try:
+            keep_alive_payload = {
+                "model": MODEL_NAME,
+                "prompt": "",
+                "keep_alive": -1
+            }
+            await client.post(OLLAMA_API_URL, json=keep_alive_payload)
+            logger.info(f"Model {MODEL_NAME} configured to stay in memory permanently")
+        except Exception as e:
+            logger.warning(f"Failed to configure model persistence: {e}")
+        start_time = time.time()
+        warmup_payload = {
+            "model": MODEL_NAME,
+            "prompt": "this is a warmup.",
+            "stream": False,
+            "options": {
+                "num_predict": 5
+            }
+        }
+
+        response = await client.post(OLLAMA_API_URL, json=warmup_payload)
+        response.raise_for_status()
+
+        warmup_time = time.time() - start_time
+        logger.info(f"Model {MODEL_NAME} warmed up successfully in {warmup_time:.2f} seconds!")
+
+    except httpx.HTTPStatusError as e:
+        logger.error(f"HTTP error during warmup: {e.response.status_code} - {e.response.text}")
+    except httpx.RequestError as e:
+        logger.error(f"Request error during warmup: {e}")
+    except Exception as e:
+        logger.error(f"Unexpected error during warmup: {e}")
+
+
 @app.on_event("shutdown")
 async def shutdown():
+    logger.info("Shutting down...")
     await client.aclose()
+    logger.info("HTTP client closed")
